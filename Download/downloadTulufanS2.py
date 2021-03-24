@@ -12,8 +12,7 @@ from sentinelsat.sentinel import SentinelAPI, read_geojson, geojson_to_wkt
 
 #GeoJSON数据目录
 os.chdir(r'H:\Temp\ResearchArea\Shandong')
-api = SentinelAPI('weiliucau', '034517Kexian', 'https://scihub.copernicus.eu/apihub')
-#api = SentinelAPI('devilweil', '034517Kexian', 'https://scihub.copernicus.eu/apihub')
+api = SentinelAPI('用户名', '密码', 'https://scihub.copernicus.eu/apihub')
 # search by polygon, time, and Hub query keywords
 #geojson=read_geojson('tulufan.geojson')
 footprint = geojson_to_wkt(read_geojson('yantai.geojson')) # 设置范围
