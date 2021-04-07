@@ -1,0 +1,120 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Apr  5 16:44:43 2021
+20米分辨率的红边重采样为10米
+@author: LW
+"""
+from osgeo import gdal,gdal_array,osr, ogr
+from skimage import io
+import os
+import glob
+from datetime import date
+import math
+import numpy as np
+import zipfile
+import pandas as pd 
+from matplotlib import pyplot as plt 
+import matplotlib.ticker as ticker
+
+os.environ['CPL_ZIP_ENCODING'] = 'UTF-8'
+
+
+####导出红边波段为单个TIF
+def exportRedEdge(filePath):
+    # 打开栅格数据集
+    root_ds = gdal.Open(filePath,1)
+    # 返回结果是一个list，list中的每个元素是一个tuple，每个tuple中包含了对数据集的路径，元数据等的描述信息
+    # tuple中的第一个元素描述的是数据子集的全路径
+    ds_list = root_ds.GetSubDatasets()
+    ###定义遥感坐标参数
+    visual_ds = gdal.Open(ds_list[1][0])
+    im_geotrans=visual_ds.GetGeoTransform()
+    
+    pronames=ds_list[1][1].split(',')[6]
+    utm=int(pronames[len(pronames)-3:len(pronames)-1])
+    
+    proj = osr.SpatialReference()
+    proj.SetProjCS(pronames)
+    proj.SetWellKnownGeogCS("WGS84")
+    proj.SetUTM(utm,True)
+    
+    visual_arr = visual_ds.ReadAsArray()  # 将数据集中的数据转为ndarray
+    if visual_arr is None: 
+        print('visual_arr is None',filePath)
+        return
+    ####根据图层重采样导出
+        
+    im_bands=['RedEdge1','RedEdge2','RedEdge3']
+    for index in range(len(im_bands)):
+        print('导出红边波段')
+        ####创建栅格
+        savepath=r'H:\GraduateFile\Ningxia\RedEdge20m\\'+im_bands[index]+'\\'
+        splitname=filePath.split('.')[0]+'_'+im_bands[index]+'_'+str(utm)+'.tif'
+        driver = gdal.GetDriverByName("GTiff")
+        dataset = driver.Create(savepath+splitname, 5490, 5490, 1, gdal.GDT_UInt16)
+        dataset.SetGeoTransform(im_geotrans)
+        dataset.SetProjection(proj.ExportToWkt())
+        dataset.GetRasterBand(1).WriteArray(visual_arr[index])
+            
+def getWrapTIF(bandFile,utm,bands):
+    
+    dataset =  gdal.Open(bandFile)
+    band =  dataset.GetRasterBand(1)
+    proj=dataset.GetProjection()
+    newRows = band.YSize*2
+    newCols = band.XSize*2
+    os.chdir(r'H:\GraduateFile\Ningxia\RedEdge10m\\'+bands)
+    gdal.Warp(bandFile,dataset,width=newCols,height=newRows)
+    
+    ###进行投影坐标赋予0可读，1可写
+    newdataset =  gdal.Open(r'H:\GraduateFile\Ningxia\RedEdge10m\\'+bands+'\\'+bandFile,1)
+    
+    projname=' UTM '+utm+'N '
+    proj = osr.SpatialReference()
+    proj.SetProjCS(projname)
+    proj.SetWellKnownGeogCS("WGS84")
+    proj.SetUTM(int(utm),True)
+    
+    newdataset.SetProjection(proj.ExportToWkt())
+    del newdataset,dataset
+    
+def initProj(bandFile,utm,bands):  
+    
+    ###进行投影坐标赋予
+    newdataset =  gdal.Open(r'H:\GraduateFile\Ningxia\RedEdge10m\\'+bands+'\\'+bandFile)
+    
+    projname=' UTM '+utm+'N '
+    proj = osr.SpatialReference()
+    proj.SetProjCS(projname)
+    proj.SetWellKnownGeogCS("WGS84")
+    proj.SetUTM(int(utm),True)
+    
+    newdataset.SetProjection(proj.ExportToWkt())
+    newBand = newdataset.GetRasterBand(1)
+    newBand.FlushCache()
+    del newdataset
+    
+if __name__ == "__main__": 
+    
+    ###1 读取ZIP文件列表到内存中,导出红边波段
+#    os.chdir(r'H:\BasicData\Ningxia\L2A_ZIP')
+#    filename = glob.glob('*.ZIP')
+#    for filePath in filename:
+#        print('正在执行：',filePath)
+#        ####导出红边波段
+#        exportRedEdge(filePath)
+    
+    
+    ####2 进行红边波段的重采样-最邻近法
+    bands='RedEdge3'
+    os.chdir(r'H:\GraduateFile\Ningxia\RedEdge20m\\'+bands)
+    filename = glob.glob('*.tif')
+    for filePath in filename:
+        print('正在执行：',filePath)
+        utm=filePath.split('_')[len(filePath.split('_'))-1].split('.')[0]
+        ####红边波段重采样
+        os.chdir(r'H:\GraduateFile\Ningxia\RedEdge20m\\'+bands)
+        getWrapTIF(filePath,utm,bands)
+
+
+    print('Complete')
