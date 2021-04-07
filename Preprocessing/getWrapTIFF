@@ -94,9 +94,58 @@ def initProj(bandFile,utm,bands):
     newBand.FlushCache()
     del newdataset
     
+def compositeMultiBands(zipname,rdg1,rdg2,rdg3,utm):
+    ####多波段合成
+    #### 打开栅格数据集
+    root_ds = gdal.Open(r'H:\BasicData\Ningxia\L2A_ZIP\\'+zipname,1)
+    # 返回结果是一个list，list中的每个元素是一个tuple，每个tuple中包含了对数据集的路径，元数据等的描述信息
+    # tuple中的第一个元素描述的是数据子集的全路径
+    ds_list = root_ds.GetSubDatasets()
+    visual_ds = gdal.Open(ds_list[0][0])
+    visual_arr = visual_ds.ReadAsArray()  # 将数据集中的数据转为ndarray
+    if visual_arr is None: 
+        print('visual_arr is None',zipname)
+        return
+    ###定义遥感坐标参数
+    im_geotrans=visual_ds.GetGeoTransform()
+    im_bands=7
+    im_height, im_width = visual_arr.shape[1],visual_arr.shape[2]
+    projname=' UTM '+utm+'N '
+    proj = osr.SpatialReference()
+    proj.SetProjCS(projname)
+    proj.SetWellKnownGeogCS("WGS84")
+    proj.SetUTM(int(utm),True)
+    
+    if 'int8' in visual_arr.dtype.name:
+        datatype = gdal.GDT_Byte
+    elif 'int16' in visual_arr.dtype.name:
+        datatype = gdal.GDT_UInt16
+    else:
+        datatype = gdal.GDT_Float32
+    
+    ####开始创建栅格
+    filename=r'H:\GraduateFile\Ningxia\CompositeSentinel2Data10m\\'+zipname.split('.')[0]+'.tif'
+    driver = gdal.GetDriverByName("GTiff")
+    dataset = driver.Create(filename, im_width, im_height, im_bands, datatype)
+    dataset.SetProjection(proj.ExportToWkt())
+    dataset.SetGeoTransform(im_geotrans)
+    for i in range(4):
+        dataset.GetRasterBand(i+1).WriteArray(visual_arr[i])
+    ###添加RedEdge1
+    rdg1Image=io.imread(r'H:\GraduateFile\Ningxia\RedEdge10m\RedEdge1\\'+rdg1)
+    dataset.GetRasterBand(5).WriteArray(rdg1Image)
+    ###添加RedEdge2
+    rdg2Image=io.imread(r'H:\GraduateFile\Ningxia\RedEdge10m\RedEdge2\\'+rdg2)
+    dataset.GetRasterBand(6).WriteArray(rdg2Image)
+    ###添加RedEdge1
+    rdg3Image=io.imread(r'H:\GraduateFile\Ningxia\RedEdge10m\RedEdge3\\'+rdg3)
+    dataset.GetRasterBand(7).WriteArray(rdg3Image)
+    
+    del dataset,rdg1Image,rdg2Image,rdg3Image
+    
 if __name__ == "__main__": 
     
-    ###1 读取ZIP文件列表到内存中,导出红边波段
+    ###第1步 读取ZIP文件列表到内存中,导出红边波段
 #    os.chdir(r'H:\BasicData\Ningxia\L2A_ZIP')
 #    filename = glob.glob('*.ZIP')
 #    for filePath in filename:
@@ -105,16 +154,34 @@ if __name__ == "__main__":
 #        exportRedEdge(filePath)
     
     
-    ####2 进行红边波段的重采样-最邻近法
-    bands='RedEdge3'
-    os.chdir(r'H:\GraduateFile\Ningxia\RedEdge20m\\'+bands)
+    ####第2步 进行红边波段的重采样-最邻近法
+#    bands='RedEdge3'
+#    os.chdir(r'H:\GraduateFile\Ningxia\RedEdge20m\\'+bands)
+#    filename = glob.glob('*.tif')
+#    for filePath in filename:
+#        print('正在执行：',filePath)
+#        utm=filePath.split('_')[len(filePath.split('_'))-1].split('.')[0]
+#        ####红边波段重采样
+#        os.chdir(r'H:\GraduateFile\Ningxia\RedEdge20m\\'+bands)
+#        getWrapTIF(filePath,utm,bands)
+    
+    
+    ####第3步 10米分辨率的多波段合成
+    os.chdir(r'H:\GraduateFile\Ningxia\RedEdge10m\RedEdge1')
     filename = glob.glob('*.tif')
     for filePath in filename:
         print('正在执行：',filePath)
-        utm=filePath.split('_')[len(filePath.split('_'))-1].split('.')[0]
-        ####红边波段重采样
-        os.chdir(r'H:\GraduateFile\Ningxia\RedEdge20m\\'+bands)
-        getWrapTIF(filePath,utm,bands)
-
+        splitname=filePath.split('_')
+        utm=splitname[len(splitname)-1].split('.')[0]
+        zipname=filePath[0:len(filePath)-16]+'.zip'
+        rdg2=filePath[0:len(filePath)-8]+'2_'+utm+'.tif'
+        rdg3=filePath[0:len(filePath)-8]+'3_'+utm+'.tif'    
+        print(zipname,'执行多波段的读取和存储...')
+#        print(zipname,rdg2,rdg3,utm)
+        compositeMultiBands(zipname,filePath,rdg2,rdg3,utm)
+        
+        
+        
+        
 
     print('Complete')
