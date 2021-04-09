@@ -101,8 +101,59 @@ def getSLC(filePath,ds_list):
     splitName=splitName+'_slc_Bands.tif'
     filenames='H:/TempData/SLC/'+splitName
     write_MultiBands_imgArray(filenames,visual_ds.GetProjection(),visual_ds.GetGeoTransform(),visual_arr,UTMName)
+###获取20米分辨率的图层    
+def get20MBandsOneTIFF(filePath,ds_list): 
+    
+    ###定义遥感坐标参数
+    visual_ds = gdal.Open(ds_list[1][0])
+    im_geotrans=visual_ds.GetGeoTransform()
+    
+    pronames=ds_list[1][1].split(',')[6]
+    proj = osr.SpatialReference()
+    proj.SetProjCS(pronames)
+    proj.SetWellKnownGeogCS("WGS84")
+    proj.SetUTM(int(pronames[len(pronames)-3:len(pronames)-1]),True)
+    
+    del visual_ds
+    
+    ####创建栅格
+    savepath=r'H:\GraduateFile\Tulufan\SCL\\'
+    splitname=filePath.split('.')[0]+'_SCL.tif'
+    driver = gdal.GetDriverByName("GTiff")
+    dataset = driver.Create(savepath+splitname, 5490, 5490, 1, gdal.GDT_UInt16)
+    dataset.SetGeoTransform(im_geotrans)
+    dataset.SetProjection(proj.ExportToWkt())
     
     
+    ######导出20m空间分辨率的波段
+#    bands=['B02','B03','B04','B05','B06','B07','B8A','B11','B12']
+    bands=['SCL']
+    z = zipfile.ZipFile(filePath, "r")
+    savePath=r'H:\TempData\JP2'
+    for index in range(len(bands)):
+        bn=bands[index]+'_20m'
+        slc=''
+        for filename in z.namelist( ):
+            if filename.find(bn)<0:
+                continue
+            else:
+                slc=filename
+                print('File:', slc)
+        z.extract(slc,savePath)#从zip文件中获得名为filename_fz的文件
+        ###导出多波段影像
+        visual_ds = gdal.Open(savePath+'\\'+slc)
+        visual_arr = visual_ds.ReadAsArray()  # 将数据集中的数据转为ndarray
+        if visual_arr is None: 
+            print('visual_arr is None',bands[index])
+            return
+        dataset.GetRasterBand(1).WriteArray(visual_arr)
+#        band=visual_arr.shape[0]
+#        for ind in range(band):
+#            
+#            dataset.GetRasterBand(ind+1).WriteArray(visual_arr[ind])
+#        
+    z.close()#关闭zip文件
+    del dataset    
     
     
     
