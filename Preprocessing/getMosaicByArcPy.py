@@ -9,13 +9,13 @@ filepath=r"H:\GraduateFile\Tulufan\SCL\ProjectSCL20m"
 
  
 #指定该工作空间下的一副影像为基础影像，为后面的参数提取做准备
-base = "S2A_MSIL2A_20191204T045151_N9999_R076_T45TXH_20210323T030721.tif"
+#base = "S2A_MSIL2A_20191204T045151_N9999_R076_T45TXH_20210323T030721.tif"
  
 #以下一段代码是为执行拼接做参数准备
-out_coor_system = arcpy.Describe(base).spatialReference #获取坐标系统
-dataType = arcpy.Describe(base).DataType  
+#out_coor_system = arcpy.Describe(base).spatialReference #获取坐标系统
+#dataType = arcpy.Describe(base).DataType  
 #cellwidth = arcpy.Describe(base).meanCellWidth #获取栅格单元的的宽度
-bandcount = arcpy.Describe(base).bandCount #获取bandCount
+#bandcount = arcpy.Describe(base).bandCount #获取bandCount
  
 #打印图像信息
 print out_coor_system.name
@@ -41,6 +41,12 @@ outFolder = r"H:\GraduateFile\Tulufan\SCL\MosaicSCL"
 for day in dateList:
     print('run ',day,' moasic...')
     originDays=glob.glob('*L2A_'+day+'*.tif')
+
+    out_coor_system = arcpy.Describe(originDays[0]).spatialReference #获取坐标系统
+    dataType = arcpy.Describe(originDays[0]).DataType  
+    #cellwidth = arcpy.Describe(base).meanCellWidth #获取栅格单元的的宽度
+    bandcount = arcpy.Describe(originDays[0]).bandCount #获取bandCount
+
     rasters = []
     for oday in originDays:
         rasters.append(oday)
@@ -56,5 +62,8 @@ for day in dateList:
 
 
 print('完成拼接')
+
+
+
 
 
