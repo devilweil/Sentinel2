@@ -68,7 +68,45 @@ def showSingleLinePlot(x,data):
     plt.grid(axis="x")
     plt.legend()
 
+def getCSAndNodataTimeSeries(filePaths,lt,rb):
+    ###根据矢量格式的研究区计算获得的像元个数
+    pixelCount=(rb[0]-lt[0])*(rb[1]-lt[1])
+    # 打开栅格数据集
+    tif=io.imread(filePaths)
+    if lt[0]<0:
+        lt[0]=0
+    if lt[1]<0:
+        lt[1]=0
+    ###判断TIFF的维数
+    tf_height, tf_width, tf_band= (0,0,0)
     
+    if len(tif.shape)==3:
+        tf_height, tf_width, tf_band= tif.shape
+        tif=tif[lt[0]:rb[0],lt[1]:rb[1],:]
+        tif=tif[:,:,0]
+    else:
+        tf_height, tf_width= tif.shape
+        tif=tif[lt[0]:rb[0],lt[1]:rb[1]]
+    
+    print('tf_height, tf_width is ',tf_height, tf_width)
+    ###计算云量和缺失数量
+    if tf_height<1 or tf_width<1:
+        return [100,0]
+    
+    sumCount0=0
+    if np.sum(tif==0) is None:
+        sumCount0=0
+    else:
+        sumCount0=np.sum(tif==0)
+
+    count9=0
+    if np.sum(tif==9) is not None:
+        count9=int((np.sum(tif==9)/((tf_height*tf_width)-sumCount0))*100)
+    
+    count0=int(((pixelCount-np.sum(tif!=0))/pixelCount)*100)
+    
+    
+    return [count0,count9]    
 def getCloudStatistic(filePaths,lt,rb):
     # 打开栅格数据集
     tif=io.imread(filePaths)
