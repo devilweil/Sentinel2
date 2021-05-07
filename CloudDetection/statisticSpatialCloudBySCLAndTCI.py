@@ -110,16 +110,16 @@ def GetExtent(in_fn):
 if __name__ == "__main__": 
     
     ###获取研究区的最小外接矩形
-#    filepath=r'F:\工作文件\博士研究\研究区域\吐鲁番\Shapefile\tulufanResearchArea.shp'
+    filepath=r'F:\工作文件\博士研究\研究区域\吐鲁番\Shapefile\tulufanResearchArea.shp'
 #    filepath=r'F:\工作文件\博士研究\研究区域\宁夏\NingxiaHelan.shp'
-    filepath=r'F:\工作文件\博士研究\研究区域\河北\Shapefile\Huailaixian.shp'
+#    filepath=r'F:\工作文件\博士研究\研究区域\河北\Shapefile\Huailaixian.shp'
     extents=getExtentByShapefile(filepath)
     print('MinLon,MaxLon,MinLat,MaxLat:',extents)
     
     #设置工作空间
-#    os.chdir(r'H:\GraduateFile\Tulufan\SCL\CompositeSCL20m')
-#    os.chdir(r'H:\GraduateFile\Ningxia\SCL\ProjectSCL20m')
-    os.chdir(r'H:\GraduateFile\Hebei\SCL\CompositeSCL20m')
+    os.chdir(r'H:\GraduateFile\Tulufan\SCL\ClipSCL')
+#    os.chdir(r'H:\GraduateFile\Ningxia\SCL\ClipSCL')
+#    os.chdir(r'H:\GraduateFile\Hebei\SCL\ClipSCL')
     filename = glob.glob('*.tif')
     dateList=[]
     print('正在执行获取唯一时间的时间列表....')
@@ -150,9 +150,9 @@ if __name__ == "__main__":
     
     del in_ds
     ####-nondata
-    outfile=r'F:\工作文件\博士研究\毕业论文\毕业用图\空值检测\空间尺度云量占比和像元缺失\hebei_SpatialCloudStatistic.tif'
+    outfile=r'F:\工作文件\博士研究\毕业论文\毕业用图\空值检测\空间尺度云量占比和像元缺失\tulufan_SpatialCloudStatistic-nondata.tif'
     driver=gdal.GetDriverByName('GTiff')
-    out_ds=driver.Create(outfile,columns,rows,1,in_band_datatype)
+    out_ds=driver.Create(outfile,columns,rows,1,gdal.GDT_CFloat32)
     out_ds.SetProjection(proj.ExportToWkt())
     geotrans[0]=extents[0]
     geotrans[3]=extents[3]
@@ -170,11 +170,19 @@ if __name__ == "__main__":
         print('LRow,LCol,RRow,RCol:',lt,rb)
         
         tif=io.imread(originDays)
-        tif[tif!=9]=0
-        tif[tif==9]=1
-#        tif[tif==0]=100
-#        tif[tif!=100]=0
-#        tif[tif==100]=1
+        
+        if len(tif.shape)==3:
+            tif=tif[:,:,0]
+        
+        stType='nondata'
+        
+        if stType=='cloud':
+            tif[tif!=9]=0
+            tif[tif==9]=1
+        else:
+            tif[tif==0]=100
+            tif[tif!=100]=0
+            tif[tif==100]=1
         print(tif.shape)
         ###判断某一天的栅格在研究区栅格左上角起始位
         
@@ -194,11 +202,21 @@ if __name__ == "__main__":
         
         tif=tif[0:rb[0],0:rb[1]]
         temp_band=np.zeros((rows,columns))
+        
         if tif.shape[0]<1 or tif.shape[1]<1:
             temp_band=temp_band+1
             continue
         print(lt[0],rb[0],lt[1],rb[1])
-        temp_band[lt[0]:lt[0]+tif.shape[0],lt[1]:lt[1]+tif.shape[1]]=temp_band[lt[0]:lt[0]+tif.shape[0],lt[1]:lt[1]+tif.shape[1]]+tif
+        print('temp_band:',temp_band[lt[0]:lt[0]+tif.shape[0],lt[1]:lt[1]+tif.shape[1]].shape)
+        print('tif:',tif.shape)
+        
+        if stType=='cloud':
+            tempArray=temp_band[lt[0]:lt[0]+tif.shape[0],lt[1]:lt[1]+tif.shape[1]]
+            temp_band[lt[0]:lt[0]+tif.shape[0],lt[1]:lt[1]+tif.shape[1]]=temp_band[lt[0]:lt[0]+tif.shape[0],lt[1]:lt[1]+tif.shape[1]]+tif[0:tempArray.shape[0],0:tempArray.shape[1]]
+        else:
+            temp_band=temp_band+1
+            tempArray=temp_band[lt[0]:lt[0]+tif.shape[0],lt[1]:lt[1]+tif.shape[1]]
+            temp_band[lt[0]:lt[0]+tif.shape[0],lt[1]:lt[1]+tif.shape[1]]=temp_band[lt[0]:lt[0]+tif.shape[0],lt[1]:lt[1]+tif.shape[1]]+tif[0:tempArray.shape[0],0:tempArray.shape[1]]-1
         out_band=out_band+temp_band
         
         
@@ -243,6 +261,11 @@ if __name__ == "__main__":
 #        
 #        
         count=count+1
+    
+    ###标准化结果
+    maxs,mins=out_band.max(),out_band.min()
+    out_band=(out_band-out_band.min())/(maxs-mins)
+    
     outband=out_ds.GetRasterBand(1)   
     outband.WriteArray(out_band)
     del outband,out_ds
