@@ -12,15 +12,15 @@ for bandcount in bands:
     filepath=r"H:\GraduateFile\Ningxia\BestScale\MultiDayNIRTIFFs\\"+str(bandcount)
     #filepath=r"H:\GraduateFile\Tulufan\BestScale\MultiDayNIRTIFFs\\"+str(bandcount)
     os.chdir(filepath) 
-    #Ö¸¶¨¹¤×÷Ä¿Â¼£¬¼´´æ·ÅÓ°ÏñµÄÄ¿Â¼
+    #æŒ‡å®šå·¥ä½œç›®å½•ï¼Œå³å­˜æ”¾å½±åƒçš„ç›®å½•
     arcpy.env.workspace = filepath
     
-    ###»ñÈ¡Î¨Ò»Ê±¼äµÄÊ±¼äÁĞ±í
-    print('ÕıÔÚÖ´ĞĞ»ñÈ¡Î¨Ò»Ê±¼äµÄÊ±¼äÁĞ±í....')
+    ###è·å–å”¯ä¸€æ—¶é—´çš„æ—¶é—´åˆ—è¡¨
+    print('æ­£åœ¨æ‰§è¡Œè·å–å”¯ä¸€æ—¶é—´çš„æ—¶é—´åˆ—è¡¨....')
     filename = glob.glob('*.tif')
 
 
-    #Ö¸¶¨Êä³öÎÄ¼ş¼Ğ
+    #æŒ‡å®šè¾“å‡ºæ–‡ä»¶å¤¹
     #outFolder = r"H:\GraduateFile\Hebei\BestScale\MultiDayNIRTIFFsComposite\\"
     outFolder = r"H:\GraduateFile\Ningxia\BestScale\MultiDayNIRTIFFsComposite\\"
     #outFolder = r"H:\GraduateFile\Tulufan\BestScale\MultiDayNIRTIFFsComposite\\"
@@ -28,7 +28,7 @@ for bandcount in bands:
     print('run  compositebands...')
     ras_list = ";".join(filename) 
 
-    #Ö´ĞĞ¶à²¨¶ÎºÏ³É²Ù×÷
+    #æ‰§è¡Œå¤šæ³¢æ®µåˆæˆæ“ä½œ
     try:
     
         arcpy.CompositeBands_management(ras_list,outFolder+"ningxia_band"+str(bandcount)+"_compbands.tif")
@@ -39,4 +39,4 @@ for bandcount in bands:
         print arcpy.GetMessages()
 
 
-print('Íê³É¶à²¨¶ÎºÏ³É')
+print('å®Œæˆå¤šæ³¢æ®µåˆæˆ')
